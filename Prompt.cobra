@@ -1,0 +1,669 @@
+
+class Program
+
+    
+    def main is shared
+    
+    
+        # Basic usage. Read an int, with no prompt text, no error checking
+        
+        i = Prompt().readInt
+        print 'you entered:', i
+        
+        
+        # A PromptException is thrown in case something goes wrong. The error cause can be queried
+        # Error causes:
+        #     None.       Nothing wrong happened.
+        #     EOF.        The EOF was found (typically when reading from a file/string)
+        #     Cancel.     The user-specified cancellation text was entered. By default, no 
+        #                     cancellation text is used (i.e., there is no way to cancel)
+        #     Validation. The user-specified validation predicated returned  
+        #                     false. No validation is used by default
+        #     Format.     The user-specified formatter could not be applied. When a Prompt 
+        #                     method of the readXxxx family is used (e.g., readInt), the
+        #                     formatter is internally set accordingly (e.g., intFormatter)
+       
+        try
+            f = Prompt().readFloat
+        catch ex as PromptException
+            print 'something went wrong ([ex.errorCause])'
+        success
+            print 'successfully read [f]'
+
+
+        # If we plan to reuse the prompt on several operations, we can keep a reference to it 
+        # This example also shows how easy it is to specify a prompt text. The 'text=' part can
+        # be omitted, we could have simply said Prompt('enter an int:')
+        
+        simplePrompt = Prompt(text='enter an int:')
+        try
+            i = simplePrompt.readInt
+        catch
+            pass
+            
+        # Note that all construction time arguments, such as 'text', can be changed after the
+        # prompt has been constructed
+        
+        simplePrompt.text = 'enter an integer:'
+            
+            
+        # It is possible to query the error cause after the read operation
+                
+        branch simplePrompt.errorCause
+            on Prompt.Error.None
+                print 'all right'
+            else
+                print 'ups, [simplePrompt.errorCause] error'
+              
+        # The special property 'success' is equivalent to .errorCause == Prompt.Error.None
+        print if(simplePrompt.success, 'success', 'failure')
+        
+        # The toString method of Prompt returns the user response, or the error cause in case 
+        # an error occurred. If no input has been entered yet, it returns 'no input'
+        
+        print simplePrompt   # depends on what we entered in the last op.
+        
+        print Prompt()       # 'no input'
+
+    
+        # It is possible to read from a given TextReader. For example, a StringReader
+    
+        strReader = StringReader('3\n hello')
+        
+        srcPrompt = Prompt(source=strReader)
+        i = srcPrompt.readInt
+        str = srcPrompt.readString       
+        print i, str 
+        
+        # Note that we have to say srcPrompt.readString. There is a simpler version,
+        # srcPrompt.readString, but it returns an Object which must thus be cast 
+        # accordingly. The above would have looked:
+        #     str = srcPrompt.read to String
+        # Below, when we present how custom formatter are created, we'll see when
+        # it makes sense to call Prompt.read directy
+        
+        
+        # If we read further from the finished stream, we can test the EOF condition
+        
+        try
+            srcPrompt.readFloat
+        catch PromptException
+            print srcPrompt.errorCause        # 'EOF'
+        
+        
+        
+        # Exceptions can be disabled from our prompt. But to do so, we must provide 
+        # a default value that will be used in case of error. 
+        
+        otherPrompt = Prompt('enter an int (no excep.):', defaultValue=17)
+        i = otherPrompt.readInt
+        print i       # 17 is something went wrong
+          
+          
+        # When defaultValue is specified, the prompt stops throwing in all subsequent
+        # operations. To bring it back to throwing, call the method restoreThrowing
+        
+        otherPrompt.restoreThrowing
+        try
+            i = otherPrompt.readInt
+        catch PromptException
+            print 'Now it DID throw!'
+            
+            
+        # A cancellation text can be specified. The read operation fails (i.e., throws
+        # or returns the default value) when this text is entered
+        
+        try
+            i = Prompt("enter an int ('c' to cancel):", cancelText='c').readInt
+        catch ex as PromptException
+            print ex.errorCause        # Cancel is 'c' was entered, Format if some other non-int
+        
+                      
+        # So far, we've covered the "no retry" operations mode of Prompt, in which 
+        # the read operation is aborted as soon as something goes wrong. Promts also
+        # support a "retry on failure" mode of operation. The easiest way to enter this
+        # mode is with the 'retry' property. This causes the prompt to retry an endless
+        # number of times (or until EOF or the cancellation text are encountered)
+        
+        retryPrompt = Prompt('enter a float (endless retry):', retry=true)
+        f = retryPrompt.readFloat  # will loop until good input or exception
+              
+        
+        # A maximum number of retries can be specified (does not include the first one)
+        # Note that specifying retries > 0 eliminates the need for retry=true.
+        # Conversely, retries=0 is equivalent to retry=false
+        # The following will prompt the initial time and 3 additional times unless of
+        # course a valid input is entered
+        
+        retryPrompt = Prompt('enter a float (3 retries):', retries=3u)
+        f = retryPrompt.readFloat
+                              
+        # We can go back to no retry afterwards
+        #    retryPrompt.retry = false
+        # Or with: 
+        #    retryPrompt.retries = 0
+        
+   
+    
+
+        # We can specify a text that is printed before every retry. 
+        # Note that specifying non-nil retryText eliminates the need for retry=true.
+        # However, retryText=nil does not set retry=false. It simply removes the retry text
+        # As an extra goodie, the character # is replaced by the nb. of retries that are left
+        # (# can be escaped using ##) 
+                
+        retryPrompt = Prompt('enter a float (endless retries with msg): ', 
+                            retryText='Try again. You have # attempts left')
+        f = retryPrompt.readFloat
+        
+        # Another example: 10 retries and retry text
+        
+        n = 10u
+        retryPrompt = Prompt('enter a float ([n] retries with msg): ', retries=n, 
+                            retryText='Try again. You have #/[n] attempts left')
+        f = retryPrompt.readFloat
+                
+                       
+	
+        # Now we'll see how to create a custom response validator. A response validator 
+        # takes the formatted response, and returns true if it's valid. For example, 
+        # if the formatter is intFormatter, then the validator must work on ints. 
+        # However, due to static typing restrictions, the validator receives the formatted 
+        # response as an Object. The validator is only called if the formatting operation 
+        # succeeded. Therefore, its argument is always a valid object of the formatted type
+        # (i.e., an int).
+        #
+        # Suppose we have the following validator for ints, defined as a shared method of 
+        # a class MyValidators:
+        #
+        #    def isEven(o as Object) as bool
+        #       return (o to int) % 2 == 0       
+        #
+        # Then, the following code uses this validator in order to forbid odd inputs
+        # (Note how I use defaultValue to achieve exception-less error checking)
+        # (Note, too, that in the current version of Cobra (0.8.0 post-release) we 
+        #    have to set the delegate property after construction, due to a bug that 
+        #    prevents using delegate properties directly in the constructor)
+        
+        
+        evenPrompt = Prompt('enter an even number:', defaultValue=2)
+        evenPrompt.validator = ref MyValidators.isEven
+        i = evenPrompt.readInt
+        branch evenPrompt.errorCause
+            on Prompt.Error.None
+                print 'an even number, [i], was entered'
+            on Prompt.Error.Validation
+                print 'Error: looks like you entered [evenPrompt.response], which is odd'
+            else
+                print 'Some other error occurred. Your input was [evenPrompt.rawResponse]'
+                
+        # Two important additinal lessons can be learned from this example:
+        #    (1) When a validation error occurs, prompt.response returns the formatted
+        #        input that did not pass validation (it is an Object?, you might 
+        #        have to cast it, but make sure it is no nil). Note that when a validation
+        #        error occurs, the result of p.readXxxx differs from p.response. The former
+        #        is not set, or the defaultValue, whereas the latter is the is the formatted
+        #        input that failed validation
+        #    (2) When a general error occurs, so that not even the formatted input is 
+        #        available, prompt.rawResponse returns the text that the user entered 
+        #        (as String?)
+                        
+        
+        # A similar example, with exceptions:
+        evenPrompt = Prompt('enter an even number (with excep.):')
+        evenPrompt.validator = ref MyValidators.isEven
+        try
+            i = evenPrompt.readInt
+        catch ex as PromptException
+            print ex
+        
+        
+        # We can change the validator later on, or eliminate it, by using the same property:
+        
+        evenPrompt.validator = nil
+        
+        
+        # Another validator example, this time using a validator delegate that holds state
+        #                            
+        #     class StringLengthValidator
+        #          var  _maxLength = 0
+        #          def init(max as int)
+        #              _maxLength = max
+        #          def validate(o as Object) as bool 
+        #              return (o to String).length <= _maxLength
+        
+        p = Prompt('enter a string, shorter than 10:')
+        p.validator = ref StringLengthValidator(10).validate
+        try
+            str = p.readString
+        catch Exception
+            print "no, that's not the idea"
+        success
+            print 'yeah, you got it right'
+
+        
+                
+        
+        # Finally, we'll see how to implement a custom formatter. This allows us to extend
+        # the Prompt facility to our own classes. Consider the following formatter, defined
+        # inside a Rational class written by ourselves:
+        #
+        #     def format(rawResponse as String) as Object? is shared
+        #         res = Rational()
+        #         if Rational.tryParse(rawResponse, out res) == true
+        #             return res
+        #         return nil
+        #
+        # It can be seen that by convention a formatter returns nil to signal that it could
+        # not perform the formatting. Otherwise, it returns the formatted object, converted
+        # to Object for static typing requirements
+        #
+        # This particular formatter relies on a Rational method (tryParse) to do the actual
+        # conversion from String (the raw user input) to Rational. This simple method simply
+        # num and den, separated by whitespace. The den part is optional
+        #
+        # This is how this formatter is used:
+        
+        rationalPrompt = Prompt('enter a rational as "num \[den]":', 
+                                defaultValue=Rational())
+        rationalPrompt.formatter = ref Rational.format
+        r = rationalPrompt.read to Rational
+        if not rationalPrompt.success
+            print 'there was an error, using default value'
+        print r
+        
+        
+        # Note that we've had to use prompt.read, because obviously there is no predefined 
+        # readXxxx method for Rationals. Thus the need to cast the result to Rational. This
+        # is tedious and error prone. Fortunately, extension methods offer an elegant 
+        # solution. Inside the same file where the Rational class is defined, we can add
+        # the following extension to the Prompt class:
+      
+        # A fancier way to achieve the same is to add extension methods to class Prompt        
+        #
+        #     extend Prompt
+        #         def readRational as Rational
+        #               .tempFormatterter = ref Rational.format
+        #               return .read to Rational
+        #
+        # Once this method has been added to Prompt, we can simply write:  
+ 
+        rationalPrompt = Prompt('enter a rational as "num \[den]":', 
+                                defaultValue=Rational())
+        r = rationalPrompt.readRational
+        if not rationalPrompt.success
+            print 'there was an error, using default value'
+        print r
+        
+        # And voilá, our Rational class behaves, from the point of view of Prompt users, 
+        # just like an ordinary Cobra primitive type
+        
+        # One thing in the implementation of readRational requires explaining. Instead of
+        # using prompt.formatter, which changes the formatter until the end of times (or
+        # until a new one is specified), we've used prompt.tempFormatter. This way,
+        # the formatter being set we'll only remain until the next read operation. 
+        # Afterwards, the previous formatted is automatically restored. Fancy isn't it?
+        # There are similar .tempXXX properties to temporary set the validator (.tempValidator)
+        # and the defaultValue (.tempDefaultValue)
+        
+        
+        
+        # Note how easy it is to extend Prompt to read types with custom requirements:
+        # 
+        #     extend Prompt
+        #         def readEvenInt as int
+        #             .tempValidator = ref MyValidators.isEven
+        #             return .readInt
+        #
+                 
+        try
+            i = Prompt('enter an even number:').readEvenInt
+        catch ex as PromptException
+            print 'an error occurred'
+        success
+            print 'succesfully read an even number ([i])'
+            
+
+            
+        # To conclude, please don't get carried away from the apparent complexity of some 
+        # of the examples presented here. In its core, the functionality provided by 
+        # Prompt is very simple:
+        
+        i = Prompt('enter a number:').readInt
+        print i
+        
+        f = Prompt('enter a float:', retryText='try again').readFloat
+        print f
+        
+        
+        
+        
+        # TODO: add built-in readXxx methods to read standard objects like lists or dictionaries,
+        
+        # TODO: add built-in readXxx methods for all primitive types (currently only supports 
+        #       int and float)
+        
+        # TODO: add to PromptException the constructor that takes innerExc as Exception? 
+        
+        # TODO: take Prompt.Error out of Promt class, making it PromptError
+
+
+
+
+
+
+# Exception that is thrown when the user cancels the operation
+class PromptException
+    inherits IOException
+
+    pro errorCause from var as Prompt.Error
+    
+    def init(c as Prompt.Error)
+        base.init('[c] error')
+        _errorCause = c
+
+
+class Prompt
+
+    def init(promptText as String)
+        .init
+        _text = promptText
+   
+    def init
+        _retries = 0u
+        _source = Console.in to !
+        _errorCause = Error.None
+        
+    enum Error
+        None
+        EOF
+        Cancel
+        Validation
+        Format
+
+                   
+    get errorCause from var as Error           
+    get success as bool
+        return _errorCause == Error.None
+    get cancelled as bool
+        return _errorCause == Error.Cancel
+    get rawResponse from var as String?
+    get response    from var as Object?
+    
+    var _defaultValue as Object?
+    pro defaultValue as Object?
+        get
+            return _defaultValue
+        set
+            _defaultValue = value
+            _restoreDefVal = false    
+    var _oldDefVal as Object?
+    var _restoreDefVal = false
+    set tempDefaultValue as Object?
+        _oldDefVal = _defaultValue
+        _restoreDefVal = true
+        _defaultValue = value    
+        
+    
+    def restoreThrowing
+        _defaultValue = nil
+            
+            
+    pro text from var as String?
+    
+    var _retryText as String?
+    pro retryText as String?
+        get
+            return _retryText
+        set
+            _retryText = value
+            if value
+                .retry = true 
+    
+    pro cancelText  from var as String?
+       
+    pro retry as bool
+        get
+            return _retries > 0
+        set
+            if value 
+                if not _retries
+                    _retries = 1000u
+            else
+                _retries = 0
+
+    pro retries from var as uint
+    pro source from var as TextReader
+    
+    # Signature for validation functions
+    sig ResponseValidator(x as Object) as bool
+
+    # The delegate that does the validation (nil if none specified)
+    var _validator as ResponseValidator?
+    pro validator as ResponseValidator?
+        get
+            return _validator
+        set
+            _validator = value
+            _restoreValidator = false
+            
+    
+    
+    # Signature for formatting functions. There will be one for each
+    # type of object that can be read (int, float...). Users can add
+    # their custom formatter for their own classes
+    sig ResponseFormatter(response as String) as Object?
+
+    # The delegate that does the formatting (nil if none specified)
+    var _formatter as ResponseFormatter?
+    pro formatter as ResponseFormatter?
+        get
+            return _formatter
+        set
+            _formatter = value
+            _restoreFormat = false    
+    var _oldFormatter as ResponseFormatter?
+    var _restoreFormat = false
+    set tempFormatter as ResponseFormatter?
+        _oldFormatter = _formatter
+        _restoreFormat = true
+        _formatter = value     
+
+    var _oldValidator as ResponseValidator?
+    var _restoreValidator = false
+    set tempValidator as ResponseValidator?
+        _oldValidator = _validator
+        _restoreValidator = true
+        _validator = value
+    
+                    
+    # Gets input, and throws in case of error / cancelation    
+    def read as Object
+    
+        try
+            .readLoop
+            if _errorCause <> Error.None 
+                if _defaultValue 
+                    return _defaultValue   # Not that response != returned value 
+                                           # in case of validation error
+                else
+                    throw PromptException(_errorCause)
+            return _response to !
+        finally
+            if _restoreFormat
+                _formatter,  _restoreFormat = _oldFormatter, false                
+            if _restoreValidator
+                _validator, _restoreValidator = _oldValidator, false                
+            if _restoreDefVal
+                _defaultValue, _restoreDefVal = _oldDefVal, false                
+                
+    # Loops until (a) a correct response is obtained or (b) the max. num. 
+    # of repetitions is reached
+
+    def readLoop
+        count = -1  
+        while count < _retries
+            _readCore
+            
+            branch _errorCause
+                on Error.Cancel or Error.EOF or Error.None
+                    return
+            
+            if _retryText
+                print _retryText
+                
+            count += 1 
+        
+
+    # Reads a raw string, tries to convert it according to the specified 
+    # defaultValue and validates with the specified validation function
+    # The raw string is stored in _rawResponse, and the formatted + validated
+    # object is stored in _response
+    
+    def _readCore
+        _errorCause = Error.None
+
+        if _text
+            print _text stop
+            
+        _rawResponse = _source.readLine
+            
+        if _rawResponse is nil
+            _errorCause = Error.EOF
+            return
+            
+        if _rawResponse == _cancelText
+            _errorCause = Error.Cancel
+            return
+        
+        raw = _rawResponse to !
+        if _formatter
+            formatted = _formatter(raw)
+            if not formatted
+                _errorCause = Error.Format
+                return
+            _response = formatted to !
+        else
+            _response = raw
+        
+        if _validator and not _validator(_response)
+            _errorCause = Error.Validation
+        
+
+    # prints the last entered response
+    def toString as String is override
+        if not .rawResponse
+            return 'no input'
+        if .success
+            return _response.toString
+        return '[_errorCause] error'
+            
+
+
+    # Formatters for primitive types
+    def intFormat(response as String) as Object? is shared
+        res = 0
+        if int.tryParse(response,out res) == true
+            return res
+        return nil
+
+    def floatFormat(response as String) as Object? is shared
+        res = 0f
+        if float.tryParse(response,out res) == true
+            return res
+        return nil
+        
+    
+    # Convenience methods to read primitive types. Basically, they
+    # set an appropriate formatter and cast the return of read
+    # to the appropriate type. 
+    
+    # The readType versions throw in case of error / cancellation, 
+    # whereas the read(defValue) versions return the specified default 
+    # value in such cases. The former is better because one does not have
+    # to specify the default value, but are less friendly for error handling,
+    # and require us to type the type being read (i.e., readInt). OTOH, the
+    # read(defValue) versions require that we pass the default value, but
+    # are more convenient from the point of error handling, as we can safely
+    # call them and then check the value of prompt.error, without the need
+    # to resort to exception handling
+    # We only offer these two flavors of reading for safety reasons. In 
+    # particular, we've deliberately avoided to create a read method that 
+    # allows the program to silenty when an error has occurred. The 
+    # read(default value) is safe on that regard, because in case of error
+    # the user specified default value is adopted (so we force the user 
+    # to think beforehand in what a safe value would be in case of error)
+    
+    def readInt as int
+        .tempFormatter = ref Prompt.intFormat 
+        return .read to int
+         
+    def readFloat as float
+        .tempFormatter = ref Prompt.floatFormat 
+        return .read to float
+
+    def readString as String
+        .tempFormatter = nil
+        .read
+        return .rawResponse to !
+
+
+# Now we'll show how to extend this feature to our own class
+      
+class Rational
+    var num = 0
+    var den = 1
+    def tryParse(str as String, res as out Rational) as bool is shared
+        numDen = str.split
+        res = Rational()
+        branch numDen.length
+            on 1
+                res.num = int.parse(numDen[0])
+            on 2
+                res.num = int.parse(numDen[0])
+                res.den = int.parse(numDen[1])
+            else
+                return false
+        return true               
+
+    def toString as String is override
+        return '[.num]/[.den]'        
+        
+    def format(response as String) as Object? is shared
+        res = Rational()
+        if Rational.tryParse(response,out res) == true
+            return res
+        return nil    
+
+    # Function to read from a prompt
+    def read(p as Prompt) as Rational
+        p.tempFormatter = ref Rational.format
+        return p.read to Rational
+        
+
+
+
+# A fancier way to achieve the same is to add extension methods to class Prompt        
+extend Prompt
+
+    def readRational as Rational
+        .tempFormatter = ref Rational.format
+        return .read to Rational
+    
+    def readEvenInt as int
+        .tempValidator = ref MyValidators.isEven
+        return .readInt
+  
+ 
+class MyValidators
+    def isEven(o as Object) as bool is shared
+        return (o to int) % 2 == 0
+
+class StringLengthValidator
+    var _maxLength as int = 10
+    def init(max as int)
+        _maxLength = max
+    def validate(o as Object) as bool 
+        return (o to String).length <= _maxLength
+
+

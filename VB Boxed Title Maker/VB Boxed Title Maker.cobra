@@ -1,0 +1,24 @@
+"""
+Creates a boxed c# comment from the most recent piece of text placed on the clipboard.
+"""
+@args -t:winexe
+
+use System
+use System.Windows.Forms
+
+# class BoxedTitleMaker 
+
+	def main has STAThread
+
+		input = Clipboard.getText
+		if input.trim.length #i.e. there is text to process.
+			Clipboard.setText(.renderBox(input))
+		
+	def renderBox(title) as String
+		"""
+		Returns the title capitalised and inside of a 'c' style comment box
+		"""	
+		nl = CobraCore.newLine
+		border = String(c'*',title.length+4)
+		
+		return '\'[border][nl]\'* [title.toUpper] *[nl]\'[border]'		

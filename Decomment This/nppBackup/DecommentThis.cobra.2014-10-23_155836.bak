@@ -1,0 +1,69 @@
+﻿"""
+Removes comment formatting from the supplied text.
+
+This: 
+/*+———————————————————————————————————————————————————+
+  | COMMENT TITLE                                     |
+  +———————————————————————————————————————————————————+
+  | Comment body, Kia ora.. Take a squiz, this        |
+  | snarky is as good as as a rip-off tiki tour.      |
+  | Mean while, in Hamilton, Tama and James Cook      |
+  | were up to no good with a bunch of sweet as L&Ps. |
+  +———————————————————————————————————————————————————+*/
+
+Becomes this:
+Comment Title
+Comment body, Kia ora.. Take a squiz, this 
+snarky is as good as as a rip-off tiki tour. 
+Mean while, in Hamilton, Tama and James Cook 
+were up to no good with a bunch of sweet as L&Ps.
+"""
+
+@args -t:winexe
+
+/#
+NOTES
+x to ! converts a nil-able value to a non nil one.
+#/
+
+use System.Windows.Forms
+
+class Program is public
+	
+	def main has STAThread is shared
+
+		input = Clipboard.getText
+
+		if input.trim.length #i.e. there is text to process.
+			lines = input.replace('\t','    ').replace(CobraCore.newLine,'\n').split(c'\n')
+
+			#Remove excess whitespace
+			for i in lines.length
+				lines[i] = lines[i].trim
+
+			#Determine the maximum width of the comment box
+			boxWidth = .getMaxLineLength(lines to !)
+
+			rendered = StringBuilder(.SB_BUFFER_SIZE)
+
+			#Render the top & title of the cool comment box
+			rendered.append(.makeBoxCap(boxWidth,CapType.Top))
+			rendered.append(.makeCommentLine(boxWidth, TextStyle.Title, lines[0]))
+
+			if lines.length > 1
+				rendered.append(.makeSeparatorLine(boxWidth))
+
+				for line in lines.length-1
+					rendered.append(.makeCommentLine(boxWidth, TextStyle.BodyCopy, lines[line+1]))
+			
+			#Render the bottom of the cool comment box
+			rendered.append(.makeBoxCap(boxWidth,CapType.Bottom))
+
+			#Return rendered box
+			Clipboard.setText(rendered.toString)
+	#/main
+	
+	def allCharsInLineAreTheSame(line as String) as Boolean is shared
+		body
+			return true
+	#/allCharsInLineAreTheSame

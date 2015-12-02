@@ -1,0 +1,62 @@
+"""
+Uses file.copy to duplicate and rename i.e. back-up the specified file.
+Steps.
+1. Check that the path exists. Exit if not
+2. Clone path to new path.
+3. Append timestamp to new path.
+3. Copy path to new path.
+"""
+use System.IO
+
+class GBArchive
+	def main
+
+		#Tests
+
+		usage = 'Usage is: GBArchive "path" e.g. GBArchive c:\\temp\\myfile.txt'
+
+		try
+			##Correct number of arguments supplied?
+			if CobraCore.commandLineArgs.count <> 2
+				print '[usage]'
+				return
+
+			path = CobraCore.commandLineArgs[1]
+
+			if not File.exists(path)
+				print 'Invalid path supplied. File "[path]" could not be found.\n[usage]'
+				return
+
+			#File exists - create new path
+			
+
+		catch ArgumentNullException
+			print 'Path is null.'
+		
+		catch ArgumentException
+			print 'Invalid path.'
+		
+		catch UnauthorizedAccessException
+			print 'Unauthorised access. Can\'t write file to destination as you do not have authorisation to do so.'
+		
+		catch FileNotFoundException
+			print 'File not found.'
+		
+		catch PathToolongException
+			print 'The path supplied is too long.'
+		
+		catch NotSupportedException
+		
+		catch ArgumentOutOfRangeException
+			print 'No path supplied.\n[usage]'
+
+		catch ioe as IOException
+			print 'IO Exception.\n[ioe.toString]'
+
+		catch ex as Exception
+			print 'An unexpected error has occurred. Details are:\n[ex.toString]'
+
+		#finally
+		success
+			print 'Success'
+			print '[path]'

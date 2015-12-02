@@ -1,0 +1,77 @@
+﻿"""
+Sorts the lines of text on the clipboard in UTF/ANSI/ASCII order.
+
+This: 
+Coal USA Magazine
+Australia's Mining Monthly Magazine
+International Coal News (Ex Australian Longwalls)
+ResourceStocks Magazine
+Contractor Magazine 
+Petroleum Magazine
+Cranes and Lifting Magazine
+Australia China Mining Review
+Mining Journal Magazine
+UK Mining Monthly
+PNG Report
+Various Publications
+Farming Ahead Magazine
+Waste Management and Environment
+Inside Waste
+Coal Asia Pacific
+ResourceStocks Digital
+Australias Mining Monthly Digital
+International Coal News Digital
+Contractor Digital
+
+Becomes this:
+Australia China Mining Review
+Australias Mining Monthly Digital
+Australia's Mining Monthly Magazine
+Coal Asia Pacific
+Coal USA Magazine
+Contractor Digital
+Contractor Magazine 
+Cranes and Lifting Magazine
+Farming Ahead Magazine
+Inside Waste
+International Coal News (Ex Australian Longwalls)
+International Coal News Digital
+Mining Journal Magazine
+Petroleum Magazine
+PNG Report
+ResourceStocks Digital
+ResourceStocks Magazine
+UK Mining Monthly
+Various Publications
+Waste Management and Environment
+"""
+
+@args -t:winexe
+
+/#
+NOTES
+x to ! converts a nil-able value to a non nil one.
+#/
+
+use System.Windows.Forms
+
+class Program is public	
+
+	def main has STAThread is shared #shared == static
+
+		input = Clipboard.getText
+
+		if input.trim.length #i.e. there is text to process.
+			lines = input.replace(CobraCore.newLine,'\n').split(c'\n')
+
+			if lines.length > 1
+				Array.sort<of String>(lines)
+				
+				sorted = StringBuilder(lines.length)
+				
+				for i in lines.length
+					sorted.append(lines[i]+CobraCore.newLine)
+				
+				#Return sorted text
+				Clipboard.setText(sorted.toString)
+	#/main

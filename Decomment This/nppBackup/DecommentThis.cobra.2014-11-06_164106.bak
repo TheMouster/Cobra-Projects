@@ -1,0 +1,110 @@
+﻿"""
+Removes comment formatting from the supplied text.
+
+This;
+/*+———————————————————————————————————————————————————+
+  | COMMENT TITLE                                     |
+  +———————————————————————————————————————————————————+
+  | Comment body, Kia ora.. Take a squiz, this        |
+  | snarky is as good as as a rip-off tiki tour.      |
+  | Mean while, in Hamilton, Tama and James Cook      |
+  | were up to no good with a bunch of sweet as L&Ps. |
+  +———————————————————————————————————————————————————+*/
+or this;
+/*****************************************************
+ * COMMENT TITLE                                     *
+ *****************************************************
+ * Comment body, Kia ora.. Take a squiz, this        *
+ * snarky is as good as as a rip-off tiki tour.      *
+ * Mean while, in Hamilton, Tama and James Cook      *
+ * were up to no good with a bunch of sweet as L&Ps. *
+ *****************************************************/
+
+Becomes this:
+COMMENT TITLE
+Comment body, Kia ora.. Take a squiz, this 
+snarky is as good as as a rip-off tiki tour. 
+Mean while, in Hamilton, Tama and James Cook 
+were up to no good with a bunch of sweet as L&Ps.
+
+or this;
+/*+———————————————+
+  | COMMENT TITLE |
+  +———————————————+*/
+
+ Becomes this:
+COMMENT TITLE
+"""
+
+@args -t:winexe
+
+/#
+NOTES
+x to ! converts a nil-able value to a non nil one.
+#/
+
+use System.Windows.Forms #Enable access to the Clipboard
+
+class Program is public
+
+	def main has STAThread is shared
+		nl = CobraCore.newLine
+
+		input = Clipboard.getText
+
+		if input.trim.length #i.e. there is text to process.
+			lines = input.replace('\t','    ').replace(nl,'\n').split(c'\n').toList
+
+			#Remove blank lines & trim any whitespace.
+			index = 0
+			while index < lines.count
+				lines[index] = lines[index].trim
+				if	lines[index] == String.empty
+					lines.removeAt(index)
+				else
+					index+=1
+			
+			/#Or as an alternative
+			for index in lines.count-1:-1:-1 #Iterate in reverse, as lists are self-adjusting
+				lines[index] = lines[index].trim
+				if lines[index].length == 0
+					lines.removeAt(index)#/
+			
+			#Remove first line.
+			lines.removeAt(0)
+			
+			#Remove last line.
+			lines.removeAt(lines.count-1)
+			
+			#Remove first character & last character from each line.
+			for index in lines.count
+				lines[index] = (lines[index])[2:]
+				lines[index] = (lines[index])[:-2]
+				#lines[index] = lines[index].remove(0,2)
+				#lines[index] = lines[index].remove(lines[index].length-2,2)
+				lines[index] = lines[index].trim
+			
+			#Kill any line that’s composed of all comment characters.
+			for index in lines.count-1:-1:-1 #Iterate in reverse, as lists are self-adjusting
+				if	.allCharsInLineAreCommentCharacters(lines[index])
+					lines.removeAt(index)
+
+			rendered = StringBuilder(lines.count)
+			for line in lines
+				rendered.append(line+nl)
+			
+			#Return rendered box
+			Clipboard.setText(rendered.toString)
+	#/main
+	
+	def allCharsInLineAreCommentCharacters(line as String) as bool is shared
+		body
+			#Comment characters are "*/+—|". Use a set.
+			commentCharacters = {'*','/','+','—','|'}
+			
+			for index in line.length
+				if not commentCharacters.contains(line[index].toString)
+					return false
+			
+			return true
+	#/allCharsInLineAreTheSame

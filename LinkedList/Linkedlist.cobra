@@ -1,0 +1,165 @@
+﻿"""
+Creates a very pretty c-style block comment out of the most recent piece of text placed on the clipboard.
+The first line is capitalised and placed in a “box” and the rest of the text is boxed below it e.g.
+
+This: 
+Comment Title
+Comment body, Kia ora.. Take a squiz, this 
+snarky is as good as as a rip-off tiki tour. 
+Mean while, in Hamilton, Tama and James Cook 
+were up to no good with a bunch of sweet as L&Ps.
+
+Becomes this:
+/*+---------------------------------------------------+
+  |                  COMMENT TITLE                    |
+  +---------------------------------------------------+
+  | Comment body, Kia ora.. Take a squiz, this        |
+  | snarky is as good as as a rip-off tiki tour.      |
+  | Mean while, in Hamilton, Tama and James Cook      |
+  | were up to no good with a bunch of sweet as L&Ps. |
+  +---------------------------------------------------+*/
+"""
+
+@args -t:winexe
+
+/#
+NOTES
+x to ! converts a nil-able value to a non nil one.
+#/
+
+use System.Windows.Forms
+
+class Program is public
+	const MAX_WIDTH as int = 70
+	const SB_BUFFER_SIZE as int = 25
+
+	enum CapType
+		Top, Bottom
+
+	enum TextStyle
+		Title, BodyCopy
+
+	def main has STAThread is shared
+
+		input = Clipboard.getText
+
+		if input.trim.length #i.e. there is text to process.
+			lines = input.replace('\t','    ').replace(CobraCore.newLine,'\n').split(c'\n')
+
+			#Remove excess whitespace
+			for i in lines.length
+				lines[i] = lines[i].trim
+
+			#Determine the maximum width of the comment box
+			boxWidth = .getMaxLineLength(lines to !)
+
+			rendered = StringBuilder(.SB_BUFFER_SIZE)
+
+			#Render the top & title of the cool comment box
+			rendered.append(.makeBoxCap(boxWidth,CapType.Top))
+			rendered.append(.makeCommentLine(boxWidth, TextStyle.Title, lines[0]))
+
+			if lines.length > 1
+				rendered.append(.makeSeparatorLine(boxWidth))
+
+				for line in lines.length-1
+					rendered.append(.makeCommentLine(boxWidth, TextStyle.BodyCopy, lines[line+1]))
+			
+			#Render the bottom of the cool comment box
+			rendered.append(.makeBoxCap(boxWidth,CapType.Bottom))
+
+			#Return rendered box
+			Clipboard.setText(rendered.toString)
+	#/main
+
+	def getMaxLineLength(lines as String[]) as int32 is shared
+		require
+			lines.length>0
+		test
+			mylines = 'aa|ccc|dd|   eee|123456789 123456|gggg ggg gg'.split(c'|')
+			assert .getMaxLineLength(mylines to !) == 16
+		body
+			previousMax = lines[0].length
+			currentMax = 0
+
+			for i in lines.length
+				currentMax = Math.max(lines[i].length,previousMax)
+				previousMax = currentMax
+
+			return currentMax
+	#/getMaxLineLength
+
+	def makeBoxCap(width as int32, capType as CapType) as String is shared
+		require
+			0 < width <= .MAX_WIDTH
+		#ensure
+		#	result.length == width+4+(CobraCore.newLine.length*2)
+		body
+			nl = CobraCore.newLine
+			result = ''
+			line = String(c'-', width+2)
+
+			branch capType
+				on CapType.Top
+					result = '/*+[line]+[nl]'
+				on CapType.Bottom
+					result = '  +[line]+*/[nl]'
+				else
+					result = ''
+
+			return result
+	#/makeBoxCap
+
+	/#
+	def centreText(width as int32, text as String) as String is shared
+		require
+			0 < width <= .MAX_WIDTH
+			width >= text.length
+		ensure
+			result.length = width
+		body
+			result = ''
+			
+			if(text.length == width)
+				result = text
+			else
+				difference = width-text.length;
+				if(difference % 2 == 0)
+					
+					
+			return result
+	#/centreHeadline
+	
+	def makeCommentLine(width as int32, style as TextStyle, text as String) as String is shared
+		require
+			0 < width <= .MAX_WIDTH
+			width >= text.length
+		ensure
+			result.length == width+6+CobraCore.newLine.length
+		body
+			result = ''
+			
+			if style == TextStyle.Title
+				text = text.toUpper
+
+			text += String(c' ',width-text.length)
+			
+			result = '  | [text] |' + CobraCore.newLine
+
+			return result
+	#/makeCommentLine	
+
+	def makeSeparatorLine(width as int32) as String is shared
+		require
+			0 < width <= .MAX_WIDTH			
+		ensure
+			result.length == width+6+CobraCore.newLine.length
+		body
+			result = ''
+			
+			line = String(c'-',width+2)
+			
+			result = '  +[line]+' + CobraCore.newLine
+
+			return result
+	#/makeSeparatorLine

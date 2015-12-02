@@ -1,0 +1,85 @@
+﻿"""
+Removes comment formatting from the supplied text.
+
+This;
+/*+———————————————————————————————————————————————————+
+  | COMMENT TITLE                                     |
+  +———————————————————————————————————————————————————+
+  | Comment body, Kia ora.. Take a squiz, this        |
+  | snarky is as good as as a rip-off tiki tour.      |
+  | Mean while, in Hamilton, Tama and James Cook      |
+  | were up to no good with a bunch of sweet as L&Ps. |
+  +———————————————————————————————————————————————————+*/
+  
+or this;
+/*****************************************************
+ * COMMENT TITLE                                     *
+ *****************************************************
+ * Comment body, Kia ora.. Take a squiz, this        *
+ * snarky is as good as as a rip-off tiki tour.      *
+ * Mean while, in Hamilton, Tama and James Cook      *
+ * were up to no good with a bunch of sweet as L&Ps. *
+ *****************************************************/
+
+Becomes this:
+COMMENT TITLE
+Comment body, Kia ora.. Take a squiz, this 
+snarky is as good as as a rip-off tiki tour. 
+Mean while, in Hamilton, Tama and James Cook 
+were up to no good with a bunch of sweet as L&Ps.
+
+or this;
+/*+———————————————+
+  | COMMENT TITLE |
+  +———————————————+*/
+
+ Becomes this:
+COMMENT TITLE
+"""
+
+@args -t:winexe
+
+/#
+NOTES
+x to ! converts a nil-able value to a non nil one.
+#/
+
+use System.Windows.Forms #Enable access to the Clipboard
+
+class Program is public
+	
+	def main has STAThread is shared
+
+		input = Clipboard.getText
+
+		if input.trim.length #i.e. there is text to process.
+			lines = input.replace('\t','    ').replace(CobraCore.newLine,'\n').split(c'\n').toList			
+
+			#Remove blank lines.
+			while index < lines.count-1
+				if	lines[index] == String.empty
+					lines[index].remove
+				else
+					index+=1
+			
+			#Remove first line.
+			#Remove last line.
+			#Trim all lines.
+			#Remove first character & last character from each line.
+			#Trim all lines.
+			#Kill any line that’s composed of all the same character.
+
+			#Remove excess whitespace
+			for i in lines.length
+				lines[i] = lines[i].trim
+
+			##rendered = StringBuilder(.SB_BUFFER_SIZE)
+			
+			#Return rendered box
+			Clipboard.setText("blah")
+	#/main
+	
+	def allCharsInLineAreTheSame(line as String) as bool is shared
+		body
+			return true
+	#/allCharsInLineAreTheSame

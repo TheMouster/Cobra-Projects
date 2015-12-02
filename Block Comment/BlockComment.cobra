@@ -1,0 +1,161 @@
+﻿@args -t:winexe
+
+"""
+Creates a pretty c-style block comment out of the most recent piece of text placed on the clipboard.
+The first line is capitalised and placed in a “box” and the rest of the text is boxed below it e.g.
+
+This: 
+Comment Title
+Comment body, Kia ora.. Take a squiz, this 
+snarky is as good as as a rip-off tiki tour. 
+Mean while, in Hamilton, Tama and James Cook 
+were up to no good with a bunch of sweet as L&Ps.
+
+Becomes this:
+/*****************************************************
+ * COMMENT TITLE                                     *
+ *****************************************************
+ * Comment body, Kia ora.. Take a squiz, this        *
+ * snarky is as good as as a rip-off tiki tour.      *
+ * Mean while, in Hamilton, Tama and James Cook      *
+ * were up to no good with a bunch of sweet as L&Ps. *
+ *****************************************************/
+"""
+
+/#
+NOTES
+x to ! converts a nil-able value to a non nil one.
+#/
+
+use System.Windows.Forms
+
+class Program
+
+	def main has STAThread is shared
+
+		input = Clipboard.getText
+
+		if input.trim.length #i.e. there is text to process.
+			lines = input.replace('\t','    ').replace(CobraCore.newLine,'\n').split(c'\n')
+			
+			##Remove excess whitespace
+			for i in lines.length
+				lines[i] = lines[i].trim
+
+			boxWidth = .getMaxLineLength(lines to !)
+
+			decorator = c'*'
+
+			rendered = StringBuilder(25)
+
+			##A row of decorator characters
+			rendered.append(.makeBoxBorder(decorator,boxWidth))
+			rendered.append(CobraCore.newLine)
+
+			##The title
+			rendered.append(.makeBoxLine(decorator,lines[0].toUpper,boxWidth))
+			rendered.append(CobraCore.newLine)
+
+			##Another row of decorator characters
+			rendered.append(.makeBoxBorder(decorator,boxWidth))
+
+			##If more than 1 line render the rest of the comment in another box.
+			if lines.length>1
+				rendered.append(CobraCore.newLine)
+
+				for line in lines.length-1
+					rendered.append(.makeBoxLine(decorator,lines[line+1],boxWidth))
+					rendered.append(CobraCore.newLine)
+
+				rendered.append(.makeBoxBorder(decorator,boxWidth))
+
+			Clipboard.setText(.commentThis(rendered.toString) + CobraCore.newLine)
+
+	def getMaxLineLength(lines as String[]) as int32 is shared
+		require
+			lines.length>0
+		test
+			mylines = 'aa|ccc|dd|   eee|123456789 123456|gggg ggg gg'.split(c'|')
+			assert .getMaxLineLength(mylines to !) == 16
+		body
+			previousMax = lines[0].length
+			currentMax = 0
+
+			for i in lines.length
+				currentMax = Math.max(lines[i].length,previousMax)
+				previousMax = currentMax
+
+			return currentMax
+
+	def commentThis(comment as String) as String is shared
+		require
+			comment is not String.empty
+		test
+			#Test 1
+			result = .commentThis('blah')
+			assert result == '/blah/'
+
+			#test 2
+			nl = CobraCore.newLine
+			result = .commentThis('g[nl]k[nl]j')
+			assert result == '/g[nl] k[nl] j/'
+
+			#test 3
+			#nl = CobraCore.newLine
+			#result = .commentThis('')
+			#assert result == ''
+
+		body
+			lines = comment.replace(CobraCore.newLine,'\n').split(c'\n') #Replace '\r\n' with '\n' and split to an array of strings
+			#Note that by default split splits a string on line endings.
+
+			if lines.length > 1
+				for i in lines.length
+					lines[i] = ' '+lines[i]
+
+				lines[0] = '/'+lines[0].substring(1,lines[0].length-1)
+				result = lines.join(CobraCore.newLine)+'/'
+			else
+				comment = '/'+comment+'/'
+				result = comment
+			return result
+
+	def makeBoxLine(borderChar as char, text as String, width as int) as String is shared
+		require
+			width >= text.length
+		ensure
+			result.length == width+4
+		test
+			#Test 1
+			result = .makeBoxLine(c'*','test',4)
+			assert result == '* test *'
+
+			#Test 2
+			result = .makeBoxLine(c'*','',4)
+			assert result == '*      *'
+
+			#Test 3
+			result = .makeBoxLine(c'*','test',10)
+			assert result == '* test       *'
+		body
+			boxLine = ''
+			text += String(c' ',width-text.length)
+			boxLine = '[borderChar] [text] [borderChar]'
+			
+			/#
+			if text.length == 0
+				boxLine = String(borderChar,width+4)
+			else
+				text += String(c' ',width-text.length)
+				boxLine = '[borderChar] [text] [borderChar]'
+			#/
+
+			return boxLine
+
+	def makeBoxBorder(borderChar as char, width as int) as String is shared
+		require
+			width > 0
+		ensure
+			result.length == width+4
+		body
+			return String(borderChar,width+4)

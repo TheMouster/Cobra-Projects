@@ -1,0 +1,19 @@
+@args -t:winexe
+
+"""
+Displays a dialog showing the length of the most recent text copied to the clipboard.
+"""
+@args -t:winexe
+
+use System
+use System.Windows.Forms
+
+class StringLength 
+
+	def main has STAThread
+
+		input = Clipboard.getText		
+		if input.trim.length #i.e. there is text to process.
+			MessageBox.show('"[input]" is [input.trim.length.toString] characters long.','String Length')
+		else
+			MessageBox.show('Usage: Copy some text to the clipboard and execute this app.','String Length')

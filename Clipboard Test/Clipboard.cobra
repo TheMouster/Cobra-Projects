@@ -1,0 +1,13 @@
+use System.Windows.Forms
+
+class Program
+
+	def main has STAThread
+		
+		input = Clipboard.getText
+		
+		if input is String.empty
+			print 'Not working, yet.'
+		else
+			print '[input]'
+			

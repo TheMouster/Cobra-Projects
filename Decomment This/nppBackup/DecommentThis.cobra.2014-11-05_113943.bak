@@ -1,0 +1,95 @@
+﻿"""
+Removes comment formatting from the supplied text.
+
+This;
+/*+———————————————————————————————————————————————————+
+  | COMMENT TITLE                                     |
+  +———————————————————————————————————————————————————+
+  | Comment body, Kia ora.. Take a squiz, this        |
+  | snarky is as good as as a rip-off tiki tour.      |
+  | Mean while, in Hamilton, Tama and James Cook      |
+  | were up to no good with a bunch of sweet as L&Ps. |
+  +———————————————————————————————————————————————————+*/
+or this;
+/*****************************************************
+ * COMMENT TITLE                                     *
+ *****************************************************
+ * Comment body, Kia ora.. Take a squiz, this        *
+ * snarky is as good as as a rip-off tiki tour.      *
+ * Mean while, in Hamilton, Tama and James Cook      *
+ * were up to no good with a bunch of sweet as L&Ps. *
+ *****************************************************/
+
+Becomes this:
+COMMENT TITLE
+Comment body, Kia ora.. Take a squiz, this 
+snarky is as good as as a rip-off tiki tour. 
+Mean while, in Hamilton, Tama and James Cook 
+were up to no good with a bunch of sweet as L&Ps.
+
+or this;
+/*+———————————————+
+  | COMMENT TITLE |
+  +———————————————+*/
+
+ Becomes this:
+COMMENT TITLE
+"""
+
+@args -t:winexe
+
+/#
+NOTES
+x to ! converts a nil-able value to a non nil one.
+#/
+
+use System.Windows.Forms #Enable access to the Clipboard
+
+class Program is public
+
+	def main has STAThread is shared
+		nl = CobraCore.newLine
+
+		input = Clipboard.getText
+
+		if input.trim.length #i.e. there is text to process.
+			lines = input.replace('\t','    ').replace(nl,'\n').split(c'\n').toList
+
+			#Remove blank lines & trim any whitespace.
+			index = 0
+			for index in lines.count-1:0:-1
+				lines[index] = lines[index].trim
+				if lines[index].length == 0
+					lines.removeAt(index)
+				
+			/#while index < lines.count-1
+				lines[index] = lines[index].trim
+				if	lines[index].length == 0
+					lines.removeAt(index)
+				else
+					index+=1#/
+			
+			#Remove excess whitespace
+			#for i in lines.count
+			#	lines[i] = lines[i].trim
+
+			#Remove first line.
+			#Remove last line.
+			#Trim all lines.
+			#Remove first character & last character from each line.
+			#Trim all lines.
+			#Kill any line that’s composed of all the same character.
+
+			rendered = StringBuilder(lines.count)
+			for line in lines
+				rendered.append(line+nl)
+			
+			#Return rendered box
+			Clipboard.setText(rendered.toString)
+	#/main
+	
+	def allCharsInLineAreCommentCharacters(line as String) as bool is shared
+		body
+			#Comment characters are "*/+—|"
+			return true
+	#/allCharsInLineAreTheSame

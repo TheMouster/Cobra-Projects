@@ -1,0 +1,65 @@
+"""
+Creates a boxed comment from the most recent piece of text placed on the clipboard.
+"""
+@args -t:winexe
+
+use System
+use System.Windows.Forms
+
+class Program 
+
+	def main has STAThread
+
+		try
+			borderStyle = CobraCore.commandLineArgs[1].toLower
+			commentStyle = CobraCore.commandLineArgs[2].toLower
+			input = Clipboard.getText
+		catch
+			borderStyle = 'single'
+			commentStyle = 'c'
+
+		if input.trim.length
+			Clipboard.setText(Box(input, borderStyle, commentStyle).render)
+
+
+class Box
+
+	var _nl as String
+	var _title as String
+	var _borderStyle as String
+	var _commentStyle as String
+	var _commentCharactersMap = {'c':'/', _
+								'vb':'\'', _
+								'asp':'\'', _
+								'cobra':'/'}
+	
+	cue init(title as String, borderStyle as String, commentStyle as String)
+		base.init
+		_nl = CobraCore.newLine
+		_title = title
+		_borderStyle = borderStyle
+		try
+			_commentStyle = _commentCharactersMap[commentStyle]
+		catch KeyNotFoundException
+			_commentStyle = 'none'
+		
+	def render as String
+		"""
+		Renders a title surrounded with the comment characters specified in the Box constructor
+		"""	
+		
+		boxWidth = 0
+		branch borderStyle
+			on 'single'
+				boxWidth = title.length+6
+				borderWidth = 1
+			else
+				boxWidth = title.length+10
+				borderWidth = 2
+				
+		lineCharacter = c'*'
+	
+		border = String(lineCharacter,_title.length+6)
+		spaces = String(c' ',_title.length+4)
+
+		return '/[border][_nl]'+' [lineCharacter][spaces][lineCharacter][_nl]'+' [lineCharacter]  [_title.toUpper]  [lineCharacter][_nl]'+' [lineCharacter][spaces][lineCharacter] [_nl]'+' [border]/'

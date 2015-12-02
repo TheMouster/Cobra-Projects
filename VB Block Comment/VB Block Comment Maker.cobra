@@ -1,0 +1,29 @@
+"""
+Creates a boxed c# comment from the most recent piece of text placed on the clipboard.
+"""
+@args -t:winexe
+
+use System
+use System.Windows.Forms
+
+class VBBlockCommentMaker 
+
+	def main has STAThread
+
+		input = Clipboard.getText
+		if input.trim.length #i.e. there is text to process.
+			Clipboard.setText(.renderComment(input))
+		
+	def renderComment(text) as String
+		"""
+		Returns the input string as commented VB Script
+		"""	
+		nl = CobraCore.newLine
+		commented = ''
+		
+		lines = text.replace(CobraCore.newLine,'\n').split(c'\n')
+		
+		for line in lines
+			commented += '\''+line.toString.trim+nl
+		
+		return commented

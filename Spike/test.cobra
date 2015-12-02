@@ -1,0 +1,16 @@
+"""
+Downloads a webpage and outputs it’s html to the console.
+"""
+@args -t:winexe
+
+use System.Net
+
+class GetWebPage
+
+	def main
+		try
+			print WebClient().downloadString('http://www.mining-news.net')
+		catch e as Exception
+			print e
+
+		Console.readLine
