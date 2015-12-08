@@ -1,15 +1,12 @@
 @args -t:winexe
 
-"""
-Displays a dialog showing the length of the most recent text copied to the clipboard.
-"""
-@args -t:winexe
-
 use System
 use System.Windows.Forms
 
 class StringLength 
-
+    """
+    Displays a dialog showing the length of the most recent text copied to the clipboard.
+    """
 	def main has STAThread
 
 		input = Clipboard.getText		
