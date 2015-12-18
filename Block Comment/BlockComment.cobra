@@ -1,27 +1,5 @@
 ﻿@args -t:winexe
 
-"""
-Creates a pretty c-style block comment out of the most recent piece of text placed on the clipboard.
-The first line is capitalised and placed in a “box” and the rest of the text is boxed below it e.g.
-
-This: 
-Comment Title
-Comment body, Kia ora.. Take a squiz, this 
-snarky is as good as as a rip-off tiki tour. 
-Mean while, in Hamilton, Tama and James Cook 
-were up to no good with a bunch of sweet as L&Ps.
-
-Becomes this:
-/*****************************************************
- * COMMENT TITLE                                     *
- *****************************************************
- * Comment body, Kia ora.. Take a squiz, this        *
- * snarky is as good as as a rip-off tiki tour.      *
- * Mean while, in Hamilton, Tama and James Cook      *
- * were up to no good with a bunch of sweet as L&Ps. *
- *****************************************************/
-"""
-
 /#
 NOTES
 x to ! converts a nil-able value to a non nil one.
@@ -31,7 +9,29 @@ use System.Windows.Forms
 
 class Program
 
-	def main has STAThread is shared
+    """
+    Creates a pretty c-style block comment out of the most recent piece of text placed on the clipboard.
+    The first line is capitalised and placed in a “box” and the rest of the text is boxed below it e.g.
+
+    This: 
+    Comment Title
+    Comment body, Kia ora.. Take a squiz, this 
+    snarky is as good as as a rip-off tiki tour. 
+    Mean while, in Hamilton, Tama and James Cook 
+    were up to no good with a bunch of sweet as L&Ps.
+
+    Becomes this:
+    /*****************************************************
+     * COMMENT TITLE                                     *
+     *****************************************************
+     * Comment body, Kia ora.. Take a squiz, this        *
+     * snarky is as good as as a rip-off tiki tour.      *
+     * Mean while, in Hamilton, Tama and James Cook      *
+     * were up to no good with a bunch of sweet as L&Ps. *
+     *****************************************************/
+    """
+	
+    def main has STAThread is shared
 
 		input = Clipboard.getText
 
